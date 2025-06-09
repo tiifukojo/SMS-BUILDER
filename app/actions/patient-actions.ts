@@ -1,27 +1,28 @@
 "use server"
 
-import { executeQuery } from "@/lib/database"
+import { MockDataStore } from "@/lib/mock-data"
 import type { Patient, Billing, Accession } from "@/lib/types"
 
+const dataStore = MockDataStore.getInstance()
+
 export async function getPatients(): Promise<Patient[]> {
-  const query = "SELECT * FROM patients ORDER BY name"
-  return await executeQuery<Patient>(query)
+  await new Promise((resolve) => setTimeout(resolve, 100))
+  return dataStore.getPatients()
 }
 
 export async function getPatientById(id: number): Promise<Patient | null> {
-  const query = "SELECT * FROM patients WHERE id = ?"
-  const results = await executeQuery<Patient>(query, [id])
-  return results[0] || null
+  await new Promise((resolve) => setTimeout(resolve, 50))
+  return dataStore.getPatientById(id)
 }
 
 export async function getBillingByPatientId(patientId: number): Promise<Billing[]> {
-  const query = "SELECT * FROM billing WHERE patient_id = ? ORDER BY created_at DESC"
-  return await executeQuery<Billing>(query, [patientId])
+  await new Promise((resolve) => setTimeout(resolve, 50))
+  return dataStore.getBillingByPatientId(patientId)
 }
 
 export async function getAccessionsByPatientId(patientId: number): Promise<Accession[]> {
-  const query = "SELECT * FROM accessions WHERE patient_id = ? ORDER BY created_at DESC"
-  return await executeQuery<Accession>(query, [patientId])
+  await new Promise((resolve) => setTimeout(resolve, 50))
+  return dataStore.getAccessionsByPatientId(patientId)
 }
 
 export async function getPatientWithRelatedData(patientId: number) {

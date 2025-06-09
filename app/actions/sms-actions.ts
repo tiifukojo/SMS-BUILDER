@@ -1,6 +1,6 @@
 "use server"
 
-import { executeQuery, executeInsert } from "@/lib/database"
+import { MockDataStore } from "@/lib/mock-data"
 import type { SMSLog } from "@/lib/types"
 import { SMSService } from "@/lib/sms-service"
 import { MessageParser } from "@/lib/message-parser"
@@ -8,18 +8,12 @@ import { getPatientWithRelatedData } from "./patient-actions"
 import { getTemplateById } from "./template-actions"
 import { revalidatePath } from "next/cache"
 
+const dataStore = MockDataStore.getInstance()
 const smsService = new SMSService()
 
-export async function getSMSLogs(): Promise<SMSLog[]> {
-  const query = `
-    SELECT l.*, p.name as patient_name, t.name as template_name
-    FROM sms_logs l
-    LEFT JOIN patients p ON l.patient_id = p.id
-    LEFT JOIN sms_templates t ON l.template_id = t.id
-    ORDER BY l.created_at DESC
-    LIMIT 100
-  `
-  return await executeQuery<SMSLog>(query)
+export async function getSMSLogs(): Promise<any[]> {
+  await new Promise((resolve) => setTimeout(resolve, 100))
+  return dataStore.getEnrichedLogs()
 }
 
 export async function logSMS(data: {
@@ -34,27 +28,23 @@ export async function logSMS(data: {
   error_message?: string
 }): Promise<{ success: boolean; error?: string; id?: number }> {
   try {
-    const query = `
-      INSERT INTO sms_logs (
-        template_id, schedule_id, patient_id, billing_id, accession_id,
-        phone_number, parsed_message, status, error_message, sent_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `
-    const id = await executeInsert(query, [
-      data.template_id || null,
-      data.schedule_id || null,
-      data.patient_id || null,
-      data.billing_id || null,
-      data.accession_id || null,
-      data.phone_number,
-      data.parsed_message,
-      data.status,
-      data.error_message || null,
-      data.status === "sent" ? new Date() : null,
-    ])
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    const log = dataStore.createLog({
+      template_id: data.template_id,
+      schedule_id: data.schedule_id,
+      patient_id: data.patient_id,
+      billing_id: data.billing_id,
+      accession_id: data.accession_id,
+      phone_number: data.phone_number,
+      parsed_message: data.parsed_message,
+      status: data.status as SMSLog["status"],
+      error_message: data.error_message,
+      sent_at: data.status === "sent" ? new Date().toISOString() : undefined,
+    })
 
     revalidatePath("/logs")
-    return { success: true, id }
+    return { success: true, id: log.id }
   } catch (error) {
     console.error("Error logging SMS:", error)
     return { success: false, error: "Failed to log SMS" }
@@ -126,6 +116,8 @@ export async function sendBulkSMS(
       failed++
       errors.push(`Patient ${patientId}: ${result.error}`)
     }
+    // Add small delay between sends to simulate real-world behavior
+    await new Promise((resolve) => setTimeout(resolve, 100))
   }
 
   return {

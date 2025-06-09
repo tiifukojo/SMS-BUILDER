@@ -13,7 +13,7 @@ export class SMSService {
     if (!this.isValidPhoneNumber(phoneNumber)) {
       return {
         success: false,
-        error: "Invalid phone number format",
+        error: "Invalid phone number format (must be E.164 format)",
       }
     }
 
@@ -22,7 +22,7 @@ export class SMSService {
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: error instanceof Error ? error.message : "Unknown SMS service error",
       }
     }
   }

@@ -1,17 +1,14 @@
 "use server"
 
-import { executeQuery, executeInsert } from "@/lib/database"
+import { MockDataStore } from "@/lib/mock-data"
 import type { SMSSchedule } from "@/lib/types"
 import { revalidatePath } from "next/cache"
 
-export async function getSchedules(): Promise<SMSSchedule[]> {
-  const query = `
-    SELECT s.*, t.name as template_name 
-    FROM sms_schedules s 
-    JOIN sms_templates t ON s.template_id = t.id 
-    ORDER BY s.send_at DESC
-  `
-  return await executeQuery<SMSSchedule>(query)
+const dataStore = MockDataStore.getInstance()
+
+export async function getSchedules(): Promise<any[]> {
+  await new Promise((resolve) => setTimeout(resolve, 100))
+  return dataStore.getEnrichedSchedules()
 }
 
 export async function createSchedule(data: {
@@ -23,21 +20,20 @@ export async function createSchedule(data: {
   created_by?: string
 }): Promise<{ success: boolean; error?: string; id?: number }> {
   try {
-    const query = `
-      INSERT INTO sms_schedules (template_id, recipient_type, recipient_ids, send_at, frequency, created_by)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `
-    const id = await executeInsert(query, [
-      data.template_id,
-      data.recipient_type,
-      data.recipient_ids ? JSON.stringify(data.recipient_ids) : null,
-      data.send_at,
-      data.frequency,
-      data.created_by || "system",
-    ])
+    await new Promise((resolve) => setTimeout(resolve, 200))
+
+    const schedule = dataStore.createSchedule({
+      template_id: data.template_id,
+      recipient_type: data.recipient_type as SMSSchedule["recipient_type"],
+      recipient_ids: data.recipient_ids,
+      send_at: data.send_at,
+      frequency: data.frequency as SMSSchedule["frequency"],
+      status: "pending",
+      created_by: data.created_by || "system",
+    })
 
     revalidatePath("/schedule")
-    return { success: true, id }
+    return { success: true, id: schedule.id }
   } catch (error) {
     console.error("Error creating schedule:", error)
     return { success: false, error: "Failed to create schedule" }
@@ -46,8 +42,13 @@ export async function createSchedule(data: {
 
 export async function updateScheduleStatus(id: number, status: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const query = "UPDATE sms_schedules SET status = ? WHERE id = ?"
-    await executeQuery(query, [status, id])
+    await new Promise((resolve) => setTimeout(resolve, 150))
+
+    const success = dataStore.updateScheduleStatus(id, status as SMSSchedule["status"])
+
+    if (!success) {
+      return { success: false, error: "Schedule not found" }
+    }
 
     revalidatePath("/schedule")
     return { success: true }
@@ -58,10 +59,6 @@ export async function updateScheduleStatus(id: number, status: string): Promise<
 }
 
 export async function getPendingSchedules(): Promise<SMSSchedule[]> {
-  const query = `
-    SELECT * FROM sms_schedules 
-    WHERE status = 'pending' AND send_at <= NOW()
-    ORDER BY send_at ASC
-  `
-  return await executeQuery<SMSSchedule>(query)
+  await new Promise((resolve) => setTimeout(resolve, 50))
+  return dataStore.getPendingSchedules()
 }

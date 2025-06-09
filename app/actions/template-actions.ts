@@ -1,18 +1,20 @@
 "use server"
 
-import { executeQuery, executeInsert } from "@/lib/database"
+import { MockDataStore } from "@/lib/mock-data"
 import type { SMSTemplate } from "@/lib/types"
 import { revalidatePath } from "next/cache"
 
+const dataStore = MockDataStore.getInstance()
+
 export async function getTemplates(): Promise<SMSTemplate[]> {
-  const query = "SELECT * FROM sms_templates ORDER BY created_at DESC"
-  return await executeQuery<SMSTemplate>(query)
+  // Simulate network delay
+  await new Promise((resolve) => setTimeout(resolve, 100))
+  return dataStore.getTemplates()
 }
 
 export async function getTemplateById(id: number): Promise<SMSTemplate | null> {
-  const query = "SELECT * FROM sms_templates WHERE id = ?"
-  const results = await executeQuery<SMSTemplate>(query, [id])
-  return results[0] || null
+  await new Promise((resolve) => setTimeout(resolve, 50))
+  return dataStore.getTemplateById(id)
 }
 
 export async function createTemplate(data: {
@@ -22,14 +24,18 @@ export async function createTemplate(data: {
   category: string
 }): Promise<{ success: boolean; error?: string; id?: number }> {
   try {
-    const query = `
-      INSERT INTO sms_templates (name, message_template, description, category)
-      VALUES (?, ?, ?, ?)
-    `
-    const id = await executeInsert(query, [data.name, data.message_template, data.description || null, data.category])
+    await new Promise((resolve) => setTimeout(resolve, 200))
+
+    const template = dataStore.createTemplate({
+      name: data.name,
+      message_template: data.message_template,
+      description: data.description,
+      category: data.category as SMSTemplate["category"],
+      is_active: true,
+    })
 
     revalidatePath("/templates")
-    return { success: true, id }
+    return { success: true, id: template.id }
   } catch (error) {
     console.error("Error creating template:", error)
     return { success: false, error: "Failed to create template" }
@@ -47,19 +53,19 @@ export async function updateTemplate(
   },
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const query = `
-      UPDATE sms_templates 
-      SET name = ?, message_template = ?, description = ?, category = ?, is_active = ?
-      WHERE id = ?
-    `
-    await executeQuery(query, [
-      data.name,
-      data.message_template,
-      data.description || null,
-      data.category,
-      data.is_active,
-      id,
-    ])
+    await new Promise((resolve) => setTimeout(resolve, 200))
+
+    const success = dataStore.updateTemplate(id, {
+      name: data.name,
+      message_template: data.message_template,
+      description: data.description,
+      category: data.category as SMSTemplate["category"],
+      is_active: data.is_active,
+    })
+
+    if (!success) {
+      return { success: false, error: "Template not found" }
+    }
 
     revalidatePath("/templates")
     return { success: true }
@@ -71,8 +77,13 @@ export async function updateTemplate(
 
 export async function deleteTemplate(id: number): Promise<{ success: boolean; error?: string }> {
   try {
-    const query = "DELETE FROM sms_templates WHERE id = ?"
-    await executeQuery(query, [id])
+    await new Promise((resolve) => setTimeout(resolve, 150))
+
+    const success = dataStore.deleteTemplate(id)
+
+    if (!success) {
+      return { success: false, error: "Template not found" }
+    }
 
     revalidatePath("/templates")
     return { success: true }

@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { sendSMSToPatient, sendBulkSMS } from "../../actions/sms-actions"
 import type { SMSTemplate, Patient } from "@/lib/types"
@@ -144,20 +143,27 @@ export default function SendForm({ templates, patients }: SendFormProps) {
     setPreviewMessage(preview)
   }
 
+  const activeTemplates = templates.filter((t) => t.is_active)
+
   return (
     <div className="card">
       <div className="card-header">
-        <h5 className="mb-0">Send SMS Message</h5>
+        <h5 className="mb-0">
+          <i className="bi bi-send me-2"></i>
+          Send SMS Message
+        </h5>
       </div>
       <div className="card-body">
         {error && (
           <div className="alert alert-danger" role="alert">
+            <i className="bi bi-exclamation-triangle me-2"></i>
             {error}
           </div>
         )}
 
         {success && (
           <div className="alert alert-success" role="alert">
+            <i className="bi bi-check-circle me-2"></i>
             {success}
           </div>
         )}
@@ -165,7 +171,7 @@ export default function SendForm({ templates, patients }: SendFormProps) {
         <form onSubmit={handleSubmit}>
           <div className="mb-3">
             <label htmlFor="template_id" className="form-label">
-              Template
+              Template <span className="text-danger">*</span>
             </label>
             <select
               className="form-select"
@@ -176,19 +182,23 @@ export default function SendForm({ templates, patients }: SendFormProps) {
               required
             >
               <option value="">Select a template</option>
-              {templates
-                .filter((t) => t.is_active)
-                .map((template) => (
-                  <option key={template.id} value={template.id}>
-                    {template.name} ({template.category})
-                  </option>
-                ))}
+              {activeTemplates.map((template) => (
+                <option key={template.id} value={template.id}>
+                  {template.name} ({template.category})
+                </option>
+              ))}
             </select>
+            {activeTemplates.length === 0 && (
+              <div className="form-text text-warning">
+                <i className="bi bi-exclamation-triangle me-1"></i>
+                No active templates available
+              </div>
+            )}
           </div>
 
           <div className="mb-3">
             <label htmlFor="recipient_type" className="form-label">
-              Recipients
+              Recipients <span className="text-danger">*</span>
             </label>
             <select
               className="form-select"
@@ -200,40 +210,57 @@ export default function SendForm({ templates, patients }: SendFormProps) {
             >
               <option value="single">Single Patient</option>
               <option value="multiple">Multiple Patients</option>
-              <option value="all">All Patients</option>
+              <option value="all">All Patients ({patients.length} total)</option>
             </select>
           </div>
 
           {formData.recipient_type !== "all" && (
             <div className="mb-3">
-              <label className="form-label">Select Patients</label>
+              <label className="form-label">
+                Select Patients <span className="text-danger">*</span>
+              </label>
               <div className="border rounded p-3" style={{ maxHeight: "200px", overflowY: "auto" }}>
-                {patients.map((patient) => (
-                  <div key={patient.id} className="form-check">
-                    <input
-                      className="form-check-input"
-                      type={formData.recipient_type === "single" ? "radio" : "checkbox"}
-                      name="patient_selection"
-                      id={`send_patient_${patient.id}`}
-                      checked={formData.recipient_ids.includes(patient.id)}
-                      onChange={(e) => {
-                        if (formData.recipient_type === "single") {
-                          setFormData((prev) => ({
-                            ...prev,
-                            recipient_ids: e.target.checked ? [patient.id] : [],
-                          }))
-                        } else {
-                          handlePatientSelection(patient.id, e.target.checked)
-                        }
-                        updatePreview()
-                      }}
-                    />
-                    <label className="form-check-label" htmlFor={`send_patient_${patient.id}`}>
-                      {patient.name} ({patient.phone_number})
-                    </label>
+                {patients.length === 0 ? (
+                  <div className="text-muted text-center py-3">
+                    <i className="bi bi-person-x display-4"></i>
+                    <p>No patients available</p>
                   </div>
-                ))}
+                ) : (
+                  patients.map((patient) => (
+                    <div key={patient.id} className="form-check">
+                      <input
+                        className="form-check-input"
+                        type={formData.recipient_type === "single" ? "radio" : "checkbox"}
+                        name="patient_selection"
+                        id={`send_patient_${patient.id}`}
+                        checked={formData.recipient_ids.includes(patient.id)}
+                        onChange={(e) => {
+                          if (formData.recipient_type === "single") {
+                            setFormData((prev) => ({
+                              ...prev,
+                              recipient_ids: e.target.checked ? [patient.id] : [],
+                            }))
+                          } else {
+                            handlePatientSelection(patient.id, e.target.checked)
+                          }
+                          updatePreview()
+                        }}
+                      />
+                      <label className="form-check-label" htmlFor={`send_patient_${patient.id}`}>
+                        <strong>{patient.name}</strong>
+                        <br />
+                        <small className="text-muted">{patient.phone_number}</small>
+                      </label>
+                    </div>
+                  ))
+                )}
               </div>
+              {formData.recipient_type !== "all" && formData.recipient_ids.length > 0 && (
+                <div className="form-text">
+                  <i className="bi bi-info-circle me-1"></i>
+                  {formData.recipient_ids.length} patient(s) selected
+                </div>
+              )}
             </div>
           )}
 
@@ -250,20 +277,35 @@ export default function SendForm({ templates, patients }: SendFormProps) {
               onChange={handleInputChange}
               placeholder='{"appointment_date": "2024-02-15", "doctor_name": "Dr. Smith"}'
             />
-            <div className="form-text">Optional: Provide custom data as JSON to replace additional placeholders</div>
+            <div className="form-text">
+              <i className="bi bi-info-circle me-1"></i>
+              Optional: Provide custom data as JSON to replace additional placeholders
+            </div>
           </div>
 
           {previewMessage && (
             <div className="mb-3">
-              <label className="form-label">Message Preview</label>
+              <label className="form-label">
+                <i className="bi bi-eye me-1"></i>
+                Message Preview
+              </label>
               <div className="message-preview">{previewMessage}</div>
+              <div className="form-text">
+                <i className="bi bi-lightbulb me-1"></i>
+                Preview with sample data - actual messages will use real patient information
+              </div>
             </div>
           )}
 
           <button
             type="submit"
             className="btn btn-primary w-100"
-            disabled={isSubmitting || (formData.recipient_type !== "all" && formData.recipient_ids.length === 0)}
+            disabled={
+              isSubmitting ||
+              !formData.template_id ||
+              (formData.recipient_type !== "all" && formData.recipient_ids.length === 0) ||
+              activeTemplates.length === 0
+            }
           >
             {isSubmitting ? (
               <>
@@ -271,7 +313,10 @@ export default function SendForm({ templates, patients }: SendFormProps) {
                 Sending...
               </>
             ) : (
-              "Send Message"
+              <>
+                <i className="bi bi-send me-2"></i>
+                Send Message
+              </>
             )}
           </button>
         </form>

@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { createTemplate, updateTemplate } from "../../actions/template-actions"
 import type { SMSTemplate } from "@/lib/types"
@@ -77,11 +76,15 @@ export default function TemplateForm({ template, isEdit = false }: TemplateFormP
   return (
     <div className="card">
       <div className="card-header">
-        <h5 className="mb-0">{isEdit ? "Edit Template" : "Create New Template"}</h5>
+        <h5 className="mb-0">
+          <i className="bi bi-file-text me-2"></i>
+          {isEdit ? "Edit Template" : "Create New Template"}
+        </h5>
       </div>
       <div className="card-body">
         {error && (
           <div className="alert alert-danger" role="alert">
+            <i className="bi bi-exclamation-triangle me-2"></i>
             {error}
           </div>
         )}
@@ -89,7 +92,7 @@ export default function TemplateForm({ template, isEdit = false }: TemplateFormP
         <form onSubmit={handleSubmit}>
           <div className="mb-3">
             <label htmlFor="name" className="form-label">
-              Template Name
+              Template Name <span className="text-danger">*</span>
             </label>
             <input
               type="text"
@@ -98,13 +101,14 @@ export default function TemplateForm({ template, isEdit = false }: TemplateFormP
               name="name"
               value={formData.name}
               onChange={handleInputChange}
+              placeholder="e.g., Patient Registration Welcome"
               required
             />
           </div>
 
           <div className="mb-3">
             <label htmlFor="category" className="form-label">
-              Category
+              Category <span className="text-danger">*</span>
             </label>
             <select
               className="form-select"
@@ -133,13 +137,13 @@ export default function TemplateForm({ template, isEdit = false }: TemplateFormP
               name="description"
               value={formData.description}
               onChange={handleInputChange}
-              placeholder="Brief description of this template"
+              placeholder="Brief description of this template's purpose"
             />
           </div>
 
           <div className="mb-3">
             <label htmlFor="message_template" className="form-label">
-              Message Template
+              Message Template <span className="text-danger">*</span>
             </label>
             <textarea
               className="form-control"
@@ -152,7 +156,9 @@ export default function TemplateForm({ template, isEdit = false }: TemplateFormP
               required
             />
             <div className="form-text">
-              Use placeholders like {"{{patient_name}}"}, {"{{amount}}"}, {"{{test_name}}"} etc.
+              <i className="bi bi-info-circle me-1"></i>
+              Use placeholders like {"{{patient_name}}"}, {"{{amount}}"}, {"{{test_name}}"} etc. to create dynamic
+              messages.
             </div>
           </div>
 
@@ -169,14 +175,19 @@ export default function TemplateForm({ template, isEdit = false }: TemplateFormP
               <label className="form-check-label" htmlFor="is_active">
                 Active Template
               </label>
+              <div className="form-text">Inactive templates cannot be used for sending messages</div>
             </div>
           )}
 
           {formData.message_template && (
             <div className="mb-3">
-              <label className="form-label">Message Preview</label>
+              <label className="form-label">
+                <i className="bi bi-eye me-1"></i>
+                Message Preview
+              </label>
               <div className="message-preview">{getMessagePreview()}</div>
               <div className="form-text">
+                <i className="bi bi-lightbulb me-1"></i>
                 Preview with sample data. Placeholders found: {getPlaceholders().join(", ") || "None"}
               </div>
             </div>
@@ -189,13 +200,15 @@ export default function TemplateForm({ template, isEdit = false }: TemplateFormP
                   <span className="loading-spinner me-2"></span>
                   {isEdit ? "Updating..." : "Creating..."}
                 </>
-              ) : isEdit ? (
-                "Update Template"
               ) : (
-                "Create Template"
+                <>
+                  <i className={`bi ${isEdit ? "bi-check-circle" : "bi-plus-circle"} me-2`}></i>
+                  {isEdit ? "Update Template" : "Create Template"}
+                </>
               )}
             </button>
             <a href="/templates" className="btn btn-secondary">
+              <i className="bi bi-x-circle me-2"></i>
               Cancel
             </a>
           </div>

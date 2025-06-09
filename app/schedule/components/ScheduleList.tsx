@@ -1,11 +1,9 @@
 "use client"
-
-import type { SMSSchedule } from "@/lib/types"
 import { updateScheduleStatus } from "../../actions/schedule-actions"
 import { useState } from "react"
 
 interface ScheduleListProps {
-  schedules: SMSSchedule[]
+  schedules: any[]
 }
 
 export default function ScheduleList({ schedules }: ScheduleListProps) {
@@ -39,6 +37,17 @@ export default function ScheduleList({ schedules }: ScheduleListProps) {
     return new Date(dateString).toLocaleString()
   }
 
+  const getRecipientInfo = (schedule: any) => {
+    if (schedule.recipient_type === "all") {
+      return { text: "All Patients", class: "bg-info" }
+    } else if (schedule.recipient_type === "single") {
+      return { text: "1 Patient", class: "bg-primary" }
+    } else {
+      const count = schedule.recipient_ids?.length || 0
+      return { text: `${count} Patients`, class: "bg-secondary" }
+    }
+  }
+
   if (schedules.length === 0) {
     return (
       <div className="text-center py-5">
@@ -63,42 +72,57 @@ export default function ScheduleList({ schedules }: ScheduleListProps) {
           </tr>
         </thead>
         <tbody>
-          {schedules.map((schedule) => (
-            <tr key={schedule.id}>
-              <td>
-                <strong>{(schedule as any).template_name}</strong>
-              </td>
-              <td>
-                <span className="badge bg-info">
-                  {schedule.recipient_type === "all"
-                    ? "All Patients"
-                    : schedule.recipient_type === "single"
-                      ? "1 Patient"
-                      : `${schedule.recipient_ids?.length || 0} Patients`}
-                </span>
-              </td>
-              <td>{formatDateTime(schedule.send_at)}</td>
-              <td>
-                <span className="badge bg-secondary">{schedule.frequency}</span>
-              </td>
-              <td>
-                <span className={`badge ${getStatusBadgeClass(schedule.status)}`}>{schedule.status}</span>
-              </td>
-              <td>
-                {schedule.status === "pending" && (
-                  <div className="btn-group btn-group-sm">
-                    <button
-                      className="btn btn-outline-danger"
-                      onClick={() => handleStatusUpdate(schedule.id, "cancelled")}
-                      disabled={updatingId === schedule.id}
-                    >
-                      {updatingId === schedule.id ? <span className="loading-spinner"></span> : "Cancel"}
-                    </button>
-                  </div>
-                )}
-              </td>
-            </tr>
-          ))}
+          {schedules.map((schedule) => {
+            const recipientInfo = getRecipientInfo(schedule)
+            return (
+              <tr key={schedule.id}>
+                <td>
+                  <strong>{schedule.template_name}</strong>
+                  <div className="text-muted small">ID: {schedule.template_id}</div>
+                </td>
+                <td>
+                  <span className={`badge ${recipientInfo.class}`}>{recipientInfo.text}</span>
+                </td>
+                <td>
+                  <div>{formatDateTime(schedule.send_at)}</div>
+                  {new Date(schedule.send_at) < new Date() && schedule.status === "pending" && (
+                    <small className="text-warning">
+                      <i className="bi bi-exclamation-triangle me-1"></i>
+                      Overdue
+                    </small>
+                  )}
+                </td>
+                <td>
+                  <span className="badge bg-secondary">{schedule.frequency}</span>
+                </td>
+                <td>
+                  <span className={`badge ${getStatusBadgeClass(schedule.status)}`}>{schedule.status}</span>
+                </td>
+                <td>
+                  {schedule.status === "pending" && (
+                    <div className="btn-group btn-group-sm">
+                      <button
+                        className="btn btn-outline-danger"
+                        onClick={() => handleStatusUpdate(schedule.id, "cancelled")}
+                        disabled={updatingId === schedule.id}
+                        title="Cancel Schedule"
+                      >
+                        {updatingId === schedule.id ? (
+                          <span className="loading-spinner"></span>
+                        ) : (
+                          <i className="bi bi-x-circle"></i>
+                        )}
+                      </button>
+                    </div>
+                  )}
+                  {schedule.status === "cancelled" && <small className="text-muted">Cancelled</small>}
+                  {(schedule.status === "sent" || schedule.status === "failed") && (
+                    <small className="text-muted">{schedule.status === "sent" ? "Completed" : "Failed"}</small>
+                  )}
+                </td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>

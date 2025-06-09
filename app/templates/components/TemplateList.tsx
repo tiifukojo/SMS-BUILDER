@@ -44,6 +44,7 @@ export default function TemplateList({ templates }: TemplateListProps) {
         <h4 className="mt-3">No Templates Found</h4>
         <p className="text-muted">Create your first SMS template to get started.</p>
         <Link href="/templates/new" className="btn btn-primary">
+          <i className="bi bi-plus-circle me-2"></i>
           Create Template
         </Link>
       </div>
